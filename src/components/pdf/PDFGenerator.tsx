@@ -1,15 +1,11 @@
 'use client'
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
 import { useStore } from '@/store'
 import { generateQRCode } from '@/lib/qrcode'
 import Button from '@/components/ui/Button'
-import { FileDown, CheckCircle, Filter, RotateCcw } from 'lucide-react'
+import { FileDown, CheckCircle, Filter, RotateCcw, Eye, X } from 'lucide-react'
 import { getUniqueClasses, nanoid } from '@/lib/utils'
 import type { Student, School } from '@/types'
-
-// Dynamically import only the document (no PDFDownloadLink)
-const CardifyDocument = dynamic(() => import('./CardifyDocument'), { ssr: false })
 
 interface DownloadButtonProps {
   students: Student[]
@@ -21,13 +17,19 @@ interface DownloadButtonProps {
 
 function DownloadButton({ students, school, qrCodes, fileName, onReset }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  const buildBlob = async () => {
+    const { pdf } = await import('@react-pdf/renderer')
+    const { default: Doc } = await import('./CardifyDocument')
+    return pdf(<Doc students={students} school={school} qrCodes={qrCodes} />).toBlob()
+  }
 
   const handleDownload = async () => {
     setLoading(true)
     try {
-      const { pdf } = await import('@react-pdf/renderer')
-      const { default: Doc } = await import('./CardifyDocument')
-      const blob = await pdf(<Doc students={students} school={school} qrCodes={qrCodes} />).toBlob()
+      const blob = await buildBlob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -41,18 +43,62 @@ function DownloadButton({ students, school, qrCodes, fileName, onReset }: Downlo
     }
   }
 
+  const handlePreview = async () => {
+    setPreviewing(true)
+    try {
+      const blob = await buildBlob()
+      const url = URL.createObjectURL(blob)
+      setPreviewUrl(url)
+    } catch (e) {
+      console.error('PDF preview error', e)
+      setPreviewing(false)
+    }
+  }
+
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+    setPreviewing(false)
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-        <CheckCircle size={18} /> PDF pret a telecharger
+    <>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
+          <CheckCircle size={18} /> PDF pret a telecharger
+        </div>
+        <div className="flex gap-2">
+          <Button size="lg" loading={loading} onClick={handleDownload} className="flex-1">
+            <FileDown size={18} /> {loading ? 'Compilation...' : 'Telecharger'}
+          </Button>
+          <Button size="lg" variant="secondary" loading={previewing && !previewUrl} onClick={handlePreview} className="flex-1">
+            <Eye size={18} /> Apercu
+          </Button>
+        </div>
+        <Button variant="secondary" className="w-full" onClick={onReset}>
+          <RotateCcw size={16} /> Regenerer
+        </Button>
       </div>
-      <Button size="lg" loading={loading} onClick={handleDownload} className="w-full">
-        <FileDown size={18} /> {loading ? 'Compilation PDF...' : 'Telecharger le PDF'}
-      </Button>
-      <Button variant="secondary" className="w-full" onClick={onReset}>
-        <RotateCcw size={16} /> Regenerer
-      </Button>
-    </div>
+
+      {/* Modal apercu PDF */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/70" onClick={closePreview}>
+          <div className="flex items-center justify-between px-4 py-2 bg-gray-900">
+            <span className="text-white text-sm font-medium">{fileName}</span>
+            <button onClick={closePreview} className="text-white hover:text-gray-300 p-1">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <iframe
+              src={previewUrl}
+              className="w-full h-full border-0"
+              title="Apercu PDF"
+            />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -86,7 +132,6 @@ export default function PDFGenerator() {
     setReady(true)
     setGenerating(false)
 
-    // Save to DB
     try {
       await fetch('/api/generate', {
         method: 'POST',
@@ -125,7 +170,7 @@ export default function PDFGenerator() {
         <select
           value={selectedClasse}
           onChange={(e) => { setSelectedClasse(e.target.value); setReady(false) }}
-          className="ml-auto border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+          className="ml-auto border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000080]"
         >
           <option value="">Toutes les classes ({students.length} eleves)</option>
           {classes.map((c) => (
@@ -144,7 +189,7 @@ export default function PDFGenerator() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-[#1e3a5f]">{exportStudents.length}</p>
+          <p className="text-2xl font-bold text-[#000080]">{exportStudents.length}</p>
           <p className="text-xs text-gray-500 mt-1">Eleves a exporter</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-4 text-center">
@@ -166,7 +211,7 @@ export default function PDFGenerator() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-[#1e3a5f] h-2 rounded-full transition-all duration-300"
+              className="bg-[#000080] h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -188,11 +233,6 @@ export default function PDFGenerator() {
             onReset={handleReset}
           />
         )}
-      </div>
-
-      {/* Preview (hidden, used for rendering) */}
-      <div className="hidden">
-        <CardifyDocument students={exportStudents} school={school} qrCodes={qrCodes} />
       </div>
 
       <div className="flex justify-start">

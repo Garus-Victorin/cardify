@@ -1,181 +1,218 @@
-import {
-  Document as RawDocument,
-  Page as RawPage,
-  View as RawView,
-  Text as RawText,
-  Image as RawImg,
-  StyleSheet,
-} from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import type { Student, School } from '@/types'
 import { chunkArray } from '@/lib/utils'
 
-// Wrap every react-pdf primitive to avoid Turbopack HTML casing conflicts
-function PdfDoc(p: React.ComponentProps<typeof RawDocument>) { return <RawDocument {...p} /> }
-function PdfPage(p: React.ComponentProps<typeof RawPage>) { return <RawPage {...p} /> }
-function PdfView(p: React.ComponentProps<typeof RawView>) { return <RawView {...p} /> }
-function PdfText(p: React.ComponentProps<typeof RawText>) { return <RawText {...p} /> }
-function PdfImg(p: React.ComponentProps<typeof RawImg>) { return <RawImg {...p} /> }
+// Aliases — kept as plain assignments so the JSX below uses PascalCase names
+// that React recognises as components, not HTML tags.
+const PdfDocument = Document
+const PdfPage     = Page
+const PdfView     = View
+const PdfText     = Text
+const PdfImage    = Image
+// Card dimensions
+const CARD_W = 204
+const CARD_H = 122
 
-const CARD_W = 210
-const CARD_H = 130
-const THEME = '#1e3a5f'
-
-const styles = StyleSheet.create({
+const S = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
-    padding: 20,
-    display: 'flex',
+    padding: '15pt 20pt',
     flexDirection: 'column',
-    gap: 12,
+    gap: 10,
+  },
+  pageRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   card: {
     width: CARD_W,
     height: CARD_H,
-    border: `2pt solid ${THEME}`,
-    borderRadius: 5,
+    borderRadius: 4,
     overflow: 'hidden',
     backgroundColor: '#ffffff',
   },
+
+  // ── HEADER (same as preview) ──
   header: {
-    backgroundColor: THEME,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: '4pt 6pt',
-    gap: 5,
+    padding: '2pt 4pt',
+    gap: 3,
   },
   logoCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  logoText: { fontSize: 3.5, fontWeight: 'bold' },
+  schoolInfoCol: { flex: 1 },
   schoolName: {
-    color: '#ffffff',
-    fontSize: 5.5,
+    fontSize: 4,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    flex: 1,
+    color: '#ffffff',
   },
-  anneeScolaire: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 4.5,
-  },
+  schoolSub: { fontSize: 3, color: 'rgba(255,255,255,0.85)' },
+  schoolSubLight: { fontSize: 2.8, color: 'rgba(255,255,255,0.75)' },
+
+  // ── TITLE BAND (no blue bg, border bottom) ──
   titleBand: {
-    backgroundColor: '#2563eb',
     alignItems: 'center',
-    padding: '2pt',
+    padding: '1.2pt 0',
+    backgroundColor: '#ffffff',
   },
   titleText: {
-    color: '#ffffff',
-    fontSize: 5,
+    fontSize: 3.6,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
+
+  // ── BODY ──
   body: {
     flexDirection: 'row',
-    padding: '5pt 6pt',
-    gap: 6,
+    padding: '3pt 4pt',
+    gap: 4,
     flex: 1,
   },
-  infoCol: { flex: 1, gap: 1.8 },
-  infoRow: { flexDirection: 'row', gap: 2 },
-  infoLabel: { fontSize: 4, color: '#6b7280', width: 42 },
-  infoValue: { fontSize: 4.5, color: '#111827', flex: 1 },
-  infoValueBold: { fontSize: 4.5, color: '#111827', fontWeight: 'bold', flex: 1 },
-  rightCol: { alignItems: 'center', gap: 3, width: 38 },
+  infoCol: { flex: 1, gap: 1.3 },
+  infoRow: { flexDirection: 'row', gap: 1.5 },
+  infoLabel: { fontSize: 2.7, color: '#6b7280', width: 33 },
+  infoValue: { fontSize: 3, color: '#111827', flex: 1 },
+  infoValueBold: { fontSize: 3, fontWeight: 'bold', flex: 1 },
+
+  // ── RIGHT COL (photo + signature) ──
+  rightCol: { alignItems: 'center', gap: 2, width: 30 },
   photo: {
-    width: 36, height: 44,
-    border: `1pt solid ${THEME}`,
-    borderRadius: 3,
-    backgroundColor: '#f3f4f6',
+    width: 26,
+    height: 35,
+    borderRadius: 1.5,
+    backgroundColor: '#f0f4f8',
     overflow: 'hidden',
   },
   signatureBox: {
-    width: 36, height: 14,
+    width: 26,
+    height: 10,
     backgroundColor: '#f9fafb',
-    border: '0.5pt solid #e5e7eb',
-    borderRadius: 2,
+    borderRadius: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signatureText: { fontSize: 3, color: '#9ca3af', textAlign: 'center' },
-  qr: { width: 20, height: 20 },
+  signatureText: { fontSize: 2.4, color: '#9ca3af', textAlign: 'center' },
+
+  // ── FOOTER ──
   footer: {
-    backgroundColor: '#f8fafc',
-    borderTop: '0.5pt solid #e5e7eb',
+    backgroundColor: '#f1f5f9',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: '2pt 6pt',
+    alignItems: 'center',
+    padding: '1.2pt 4pt',
   },
-  footerText: { fontSize: 3.5, color: '#6b7280' },
-  footerBold: { fontSize: 3.5, color: THEME, fontWeight: 'bold' },
-  pageRow: { flexDirection: 'row', justifyContent: 'center', gap: 15 },
+  footerText: { fontSize: 2.7, color: '#64748b' },
+  footerAddr: { fontSize: 2.4, color: '#94a3b8' },
+  footerBold: { fontSize: 2.7, fontWeight: 'bold' },
 })
 
-function PDFCard({ student, school, qrCode }: { student: Student; school: School; qrCode?: string }) {
+function InfoRow({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
   return (
-    <PdfView style={styles.card}>
-      <PdfView style={styles.header}>
-        <PdfView style={styles.logoCircle}>
-          {school.logoUrl
-            ? <PdfImg src={school.logoUrl} style={{ width: 24, height: 24 }} />
-            : <PdfText style={{ fontSize: 4, color: '#ffffff', fontWeight: 'bold' }}>CS</PdfText>
-          }
-        </PdfView>
-        <PdfView style={{ flex: 1 }}>
-          <PdfText style={styles.schoolName}>{school.name}</PdfText>
-          <PdfText style={styles.anneeScolaire}>Annee scolaire {school.anneeScolaire}</PdfText>
-        </PdfView>
-        {school.flagUrl && <PdfImg src={school.flagUrl} style={{ width: 20, height: 13 }} />}
-      </PdfView>
-
-      <PdfView style={styles.titleBand}>
-        <PdfText style={styles.titleText}>Carte d&apos;Identite Scolaire</PdfText>
-      </PdfView>
-
-      <PdfView style={styles.body}>
-        <PdfView style={styles.infoCol}>
-          <InfoRow label="Nom et prenoms" value={`${student.nom} ${student.prenoms}`} />
-          <InfoRow label="Ne(e) le" value={student.neLe} />
-          <InfoRow label="Lieu naiss." value={student.lieuNaissance} />
-          <InfoRow label="Nationalite" value={student.nationalite} />
-          <InfoRow label="Sexe" value={student.sexe === 'M' ? 'Masculin' : 'Feminin'} />
-          <InfoRow label="Classe" value={student.classe} />
-          {student.tel && <InfoRow label="N Tel" value={student.tel} />}
-          <InfoRow label="N Matricule" value={student.matricule} bold />
-        </PdfView>
-
-        <PdfView style={styles.rightCol}>
-          <PdfView style={styles.photo}>
-            {student.photoUrl && <PdfImg src={student.photoUrl} style={{ width: 36, height: 44, objectFit: 'cover' }} />}
-          </PdfView>
-          <PdfView style={styles.signatureBox}>
-            {school.signatureUrl
-              ? <PdfImg src={school.signatureUrl} style={{ maxWidth: 34, maxHeight: 12 }} />
-              : <PdfText style={styles.signatureText}>{'Signature\ndu titulaire'}</PdfText>
-            }
-          </PdfView>
-          {qrCode && <PdfImg src={qrCode} style={styles.qr} />}
-        </PdfView>
-      </PdfView>
-
-      <PdfView style={styles.footer}>
-        <PdfText style={styles.footerText}>Delivre le : {school.dateCarteLabel}</PdfText>
-        <PdfText style={styles.footerBold}>{school.anneeScolaire}</PdfText>
-      </PdfView>
+    <PdfView style={S.infoRow}>
+      <PdfText style={S.infoLabel}>{label} :</PdfText>
+      <PdfText style={[bold ? S.infoValueBold : S.infoValue, color ? { color } : {}]}>
+        {value || '-'}
+      </PdfText>
     </PdfView>
   )
 }
 
-function InfoRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function PdfCard({ student, school }: { student: Student; school: School }) {
+  const theme = school.themeColor || '#000080'
+
   return (
-    <PdfView style={styles.infoRow}>
-      <PdfText style={styles.infoLabel}>{label} :</PdfText>
-      <PdfText style={bold ? styles.infoValueBold : styles.infoValue}>{value || '-'}</PdfText>
+    <PdfView style={[S.card, { border: `1.5pt solid ${theme}` }]}>
+
+      {/* HEADER — same fields as CardPreview */}
+      <PdfView style={[S.header, { backgroundColor: theme }]}>
+        <PdfView style={[S.logoCircle, { border: `1pt solid rgba(255,255,255,0.5)` }]}>
+          {school.logoUrl
+            ? <PdfImage src={school.logoUrl} style={{ width: 13, height: 13 }} />
+            : <PdfText style={[S.logoText, { color: theme }]}>CS</PdfText>
+          }
+        </PdfView>
+
+        <PdfView style={S.schoolInfoCol}>
+          <PdfText style={S.schoolName}>{school.name}</PdfText>
+          {school.lieu
+            ? <PdfText style={S.schoolSub}>{school.lieu}</PdfText>
+            : null
+          }
+          {school.telephone
+            ? <PdfText style={S.schoolSubLight}>Tel : {school.telephone}</PdfText>
+            : null
+          }
+          <PdfText style={S.schoolSubLight}>Ann. scol. {school.anneeScolaire}</PdfText>
+        </PdfView>
+
+        {school.flagUrl
+          ? <PdfImage src={school.flagUrl} style={{ width: 12, height: 8 }} />
+          : null
+        }
+      </PdfView>
+
+      {/* TITLE — no blue background, theme color text + bottom border */}
+      <PdfView style={[S.titleBand, { borderBottom: `0.8pt solid ${theme}` }]}>
+        <PdfText style={[S.titleText, { color: theme }]}>
+          Carte d&apos;Identite Scolaire
+        </PdfText>
+      </PdfView>
+
+      {/* BODY */}
+      <PdfView style={S.body}>
+        <PdfView style={S.infoCol}>
+          <InfoRow label="Nom et Prenoms"     value={`${student.nom} ${student.prenoms}`} />
+          <InfoRow label="Ne(e) le"           value={student.neLe} />
+          <InfoRow label="Lieu de naissance"  value={student.lieuNaissance} />
+          <InfoRow label="Nationalite"        value={student.nationalite} />
+          <InfoRow label="Sexe"               value={student.sexe === 'M' ? 'Masculin' : 'Feminin'} />
+          <InfoRow label="Classe"             value={student.classe} />
+          {student.tel
+            ? <InfoRow label="N Tel" value={student.tel} />
+            : null
+          }
+          <InfoRow label="N Matricule" value={student.matricule} bold color={theme} />
+        </PdfView>
+
+        <PdfView style={S.rightCol}>
+          {/* Photo */}
+          <PdfView style={[S.photo, { border: `1pt solid ${theme}` }]}>
+            {student.photoUrl
+              ? <PdfImage src={student.photoUrl} style={{ width: 26, height: 35, objectFit: 'cover' }} />
+              : null
+            }
+          </PdfView>
+
+          {/* Signature */}
+          <PdfView style={[S.signatureBox, { border: `0.5pt solid #d1d5db` }]}>
+            {school.signatureUrl
+              ? <PdfImage src={school.signatureUrl} style={{ maxWidth: 24, maxHeight: 8 }} />
+              : <PdfText style={S.signatureText}>{'Signature\ndu titulaire'}</PdfText>
+            }
+          </PdfView>
+        </PdfView>
+      </PdfView>
+
+      {/* FOOTER */}
+      <PdfView style={S.footer}>
+        <PdfText style={S.footerText}>Delivre le : {school.dateCarteLabel}</PdfText>
+        {school.adresse
+          ? <PdfText style={S.footerAddr}>{school.adresse}</PdfText>
+          : null
+        }
+        <PdfText style={[S.footerBold, { color: theme }]}>{school.anneeScolaire}</PdfText>
+      </PdfView>
     </PdfView>
   )
 }
@@ -186,19 +223,19 @@ interface CardifyDocumentProps {
   qrCodes: Record<string, string>
 }
 
-export default function CardifyDocument({ students, school, qrCodes }: CardifyDocumentProps) {
+export default function CardifyDocument({ students, school }: CardifyDocumentProps) {
   const pages = chunkArray(students, 3)
   return (
-    <PdfDoc title={`Cartes scolaires - ${school.name}`} author="Cardify">
+    <PdfDocument title={`Cartes scolaires - ${school.name}`} author="Cardify">
       {pages.map((group, pageIdx) => (
-        <PdfPage key={pageIdx} size="A4" orientation="portrait" style={styles.page}>
+        <PdfPage key={pageIdx} size="A4" orientation="portrait" style={S.page}>
           {group.map((student) => (
-            <PdfView key={student.id} style={styles.pageRow}>
-              <PDFCard student={student} school={school} qrCode={qrCodes[student.id]} />
+            <PdfView key={student.id} style={S.pageRow}>
+              <PdfCard student={student} school={school} />
             </PdfView>
           ))}
         </PdfPage>
       ))}
-    </PdfDoc>
+    </PdfDocument>
   )
 }

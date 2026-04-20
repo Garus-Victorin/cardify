@@ -46,11 +46,11 @@ export default function DashboardPage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#1e3a5f] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-[#000080] flex items-center justify-center">
               <GraduationCap size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[#1e3a5f]">Cardify</h1>
+              <h1 className="text-lg font-bold text-[#000080]">Cardify</h1>
               <p className="text-xs text-gray-400">{school.name}</p>
             </div>
           </div>
