@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(SECRETAIRE)
+  schoolId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school    School?  @relation(fields: [schoolId], references: [id])
+
+  @@map("users")
+}
+
+model School {
+  id             String   @id @default(cuid())
+  name           String
+  adresse        String?
+  lieu           String?
+  telephone      String?
+  logoUrl        String?  @db.Text
+  flagUrl        String?  @db.Text
+  signatureUrl   String?  @db.Text
+  anneeScolaire  String   @default("2024-2025")
+  dateCarteLabel String   @default("Septembre 2024")
+  themeColor     String   @default("#1e3a5f")
+  plan           Plan     @default(FREE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users      User[]
+  students   Student[]
+  history    GenerationHistory[]
+
+  @@map("schools")
+}
+
+model Student {
+  id             String   @id @default(cuid())
+  matricule      String
+  nom            String
+  prenoms        String
+  neLe           String
+  lieuNaissance  String
+  nationalite    String
+  sexe           Sexe
+  classe         String
+  tel            String?
+  photoUrl       String?  @db.Text
+  schoolId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([matricule, schoolId])
+  @@map("students")
+}
+
+model GenerationHistory {
+  id           String   @id @default(cuid())
+  schoolId     String
+  studentCount Int
+  classeFilter String?
+  createdAt    DateTime @default(now())
+
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("generation_history")
+}
+
+enum Role {
+  ADMIN
+  SECRETAIRE
+  VIEWER
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum Sexe {
+  M
+  F
+}
