@@ -51,40 +51,36 @@ function toStoreHistory(db: Record<string, unknown>): GenerationHistory {
 
 export function useSync() {
   const { user } = useAuth()
-  const { setSchool, setStudents, addHistory, school, students, history } = useStore()
+  const { setSchool, setStudents, addHistory, school, students } = useStore()
   const initialized = useRef(false)
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const schoolTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const studentsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load all data from DB on mount
+  // ── Load all data from DB on mount ──
   useEffect(() => {
     if (!user?.schoolId || initialized.current) return
     initialized.current = true
 
     const load = async () => {
       try {
-        // Load school settings
-        const sRes = await fetch(`/api/settings?schoolId=${user.schoolId}`, { credentials: 'include' })
+        const [sRes, stRes, hRes] = await Promise.all([
+          fetch(`/api/settings?schoolId=${user.schoolId}`, { credentials: 'include' }),
+          fetch(`/api/students?schoolId=${user.schoolId}`, { credentials: 'include' }),
+          fetch(`/api/generate?schoolId=${user.schoolId}`, { credentials: 'include' }),
+        ])
+
         if (sRes.ok) {
           const data = await sRes.json()
           if (data) setSchool(toStoreSchool(data))
         }
-
-        // Load students
-        const stRes = await fetch(`/api/students?schoolId=${user.schoolId}`, { credentials: 'include' })
         if (stRes.ok) {
           const data = await stRes.json()
-          if (Array.isArray(data)) setStudents(data.map(toStoreStudent))
+          if (Array.isArray(data) && data.length > 0) setStudents(data.map(toStoreStudent))
         }
-
-        // Load history
-        const hRes = await fetch(`/api/generate?schoolId=${user.schoolId}`, { credentials: 'include' })
         if (hRes.ok) {
           const data = await hRes.json()
           if (Array.isArray(data)) {
-            // Only add entries not already in store
-            data.forEach((entry: Record<string, unknown>) => {
-              addHistory(toStoreHistory(entry))
-            })
+            data.forEach((entry: Record<string, unknown>) => addHistory(toStoreHistory(entry)))
           }
         }
       } catch (e) {
@@ -95,51 +91,55 @@ export function useSync() {
     load()
   }, [user?.schoolId, setSchool, setStudents, addHistory])
 
-  // Save school settings to DB (debounced)
-  const saveSchool = useCallback(async () => {
-    if (!user?.schoolId) return
+  // ── Save school settings (debounced 1.5s) ──
+  const saveSchool = useCallback(async (schoolId: string) => {
     try {
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...school, id: user.schoolId }),
+        body: JSON.stringify({ ...school, id: schoolId }),
       })
     } catch (e) {
       console.error('[useSync] saveSchool error', e)
     }
-  }, [school, user?.schoolId])
+  }, [school])
 
-  // Save students to DB (debounced)
-  const saveStudents = useCallback(async () => {
-    if (!user?.schoolId || students.length === 0) return
+  // ── Save students (debounced 2s) ──
+  const saveStudents = useCallback(async (schoolId: string) => {
+    if (students.length === 0) return
     try {
-      await fetch('/api/students', {
+      const res = await fetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ schoolId: user.schoolId, students }),
+        body: JSON.stringify({ schoolId, students }),
       })
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('[useSync] saveStudents failed:', res.status, text)
+      }
     } catch (e) {
       console.error('[useSync] saveStudents error', e)
     }
-  }, [students, user?.schoolId])
+  }, [students])
 
-  // Auto-save school on change (debounced 1.5s)
+  // Auto-save school
   useEffect(() => {
     if (!user?.schoolId || !initialized.current) return
-    if (saveTimeout.current) clearTimeout(saveTimeout.current)
-    saveTimeout.current = setTimeout(saveSchool, 1500)
-    return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current) }
+    if (schoolTimeout.current) clearTimeout(schoolTimeout.current)
+    schoolTimeout.current = setTimeout(() => saveSchool(user.schoolId), 1500)
+    return () => { if (schoolTimeout.current) clearTimeout(schoolTimeout.current) }
   }, [school, saveSchool, user?.schoolId])
 
-  // Auto-save students on change (debounced 2s)
-  useEffect(() => {
-    if (!user?.schoolId || !initialized.current) return
-    if (saveTimeout.current) clearTimeout(saveTimeout.current)
-    saveTimeout.current = setTimeout(saveStudents, 2000)
-    return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current) }
-  }, [students, saveStudents, user?.schoolId])
+  // Auto-save students — DISABLED, only manual save to avoid race conditions
+  // Students are saved explicitly when user navigates forward in the pipeline
+  // useEffect(() => {
+  //   if (!user?.schoolId || !initialized.current || students.length === 0) return
+  //   if (studentsTimeout.current) clearTimeout(studentsTimeout.current)
+  //   studentsTimeout.current = setTimeout(() => saveStudents(user.schoolId), 2000)
+  //   return () => { if (studentsTimeout.current) clearTimeout(studentsTimeout.current) }
+  // }, [students, saveStudents, user?.schoolId])
 
-  return { saveSchool, saveStudents }
+  return { saveSchool: () => user?.schoolId && saveSchool(user.schoolId), saveStudents: () => user?.schoolId && saveStudents(user.schoolId) }
 }

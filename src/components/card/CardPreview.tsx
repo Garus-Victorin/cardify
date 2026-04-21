@@ -10,215 +10,239 @@ interface CardPreviewProps {
   scale?: number
 }
 
+const BASE_W = 600
+
 export default function CardPreview({ student, school, scale = 1 }: CardPreviewProps) {
   const [qrCode, setQrCode] = useState('')
+  const s = scale
 
   useEffect(() => {
-    generateQRCode(`CARDIFY|${student.matricule}|${student.nom}|${student.prenoms}|${student.classe}|${school.name}|${school.anneeScolaire}`)
-      .then(setQrCode)
-      .catch(() => {})
+    generateQRCode(
+      `CARDIFY|${student.matricule}|${student.nom}|${student.prenoms}|${student.classe}|${school.name}|${school.anneeScolaire}`
+    ).then(setQrCode).catch(() => {})
   }, [student.matricule, student.nom, student.prenoms, student.classe, school.name, school.anneeScolaire])
 
-  const theme = school.themeColor || '#000080'
-  const W = 340
-  const H = 204
-
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 * scale }}>
-      {/* ── CARTE ── */}
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 * s }}>
+      {/* CARTE */}
       <div style={{
-        width: W * scale,
-        height: H * scale,
+        width: BASE_W * s,
+        background: '#fff',
+        border: `${1 * s}px solid #ddd`,
+        padding: `${10 * s}px ${12 * s}px ${14 * s}px`,
+        color: '#111',
+        position: 'relative',
         fontFamily: 'Arial, Helvetica, sans-serif',
-        border: `${2 * scale}px solid ${theme}`,
-        borderRadius: 6 * scale,
-        overflow: 'hidden',
-        backgroundColor: '#fff',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+        boxSizing: 'border-box',
         flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
       }}>
-        {/* HEADER */}
+
+        {/* ── TOP : logo | infos école | drapeau ── */}
         <div style={{
-          backgroundColor: theme,
-          padding: `${3 * scale}px ${6 * scale}px`,
           display: 'flex',
           alignItems: 'center',
-          gap: 5 * scale,
+          justifyContent: 'space-between',
+          gap: 10 * s,
         }}>
+          {/* Logo */}
           <div style={{
-            width: 22 * scale, height: 22 * scale,
-            borderRadius: '50%',
-            backgroundColor: '#fff',
-            border: `${1.5 * scale}px solid rgba(255,255,255,0.6)`,
-            overflow: 'hidden', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 70 * s,
+            height: 70 * s,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
           }}>
             {school.logoUrl
-              ? <img src={school.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 6 * scale, fontWeight: 'bold', color: theme, lineHeight: 1 }}>CS</span>
+              ? <img src={school.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : <div style={{ width: '100%', height: '100%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 * s, color: '#9ca3af', fontWeight: 'bold' }}>LOGO</div>
             }
           </div>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: '#fff', fontSize: 6 * scale, fontWeight: 'bold', textTransform: 'uppercase', lineHeight: 1.2, margin: 0 }}>
-              {school.name}
-            </p>
-            {school.lieu && (
-              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 5 * scale, margin: 0, marginTop: 0.5 * scale }}>
-                {school.lieu}
-              </p>
-            )}
-            {school.telephone && (
-              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 4.5 * scale, margin: 0 }}>
-                Tel : {school.telephone}
-              </p>
-            )}
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 4.5 * scale, margin: 0 }}>
-              Ann. scol. {school.anneeScolaire}
-            </p>
-          </div>
-
-          {school.flagUrl && (
-            <img src={school.flagUrl} alt="flag" style={{
-              width: 20 * scale, height: 13 * scale,
-              objectFit: 'cover', borderRadius: 1.5 * scale,
-              border: `${scale}px solid rgba(255,255,255,0.4)`,
-              flexShrink: 0,
-            }} />
-          )}
-        </div>
-
-        {/* TITRE — sans fond bleu, juste texte sur fond blanc avec bordure */}
-        <div style={{
-          borderBottom: `${scale}px solid ${theme}`,
-          textAlign: 'center',
-          padding: `${2 * scale}px`,
-          backgroundColor: '#fff',
-        }}>
-          <p style={{
-            color: theme, fontSize: 6 * scale, fontWeight: 'bold',
-            letterSpacing: 1 * scale, textTransform: 'uppercase', margin: 0,
+          {/* Infos école */}
+          <div style={{
+            flex: 1,
+            textAlign: 'center',
+            lineHeight: 1.25,
+            fontSize: 16 * s,
+            fontWeight: 500,
+            paddingTop: 2 * s,
           }}>
-            Carte d&apos;Identit&eacute; Scolaire
-          </p>
-        </div>
-
-        {/* CORPS */}
-        <div style={{
-          display: 'flex',
-          padding: `${5 * scale}px ${6 * scale}px`,
-          gap: 6 * scale,
-          backgroundColor: '#fff',
-          flex: 1,
-        }}>
-          {/* Infos */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.2 * scale }}>
-            <Row label="Nom et Prenoms" value={`${student.nom} ${student.prenoms}`} scale={scale} />
-            <Row label="Ne(e) le" value={student.neLe} scale={scale} />
-            <Row label="Lieu de naissance" value={student.lieuNaissance} scale={scale} />
-            <Row label="Nationalite" value={student.nationalite} scale={scale} />
-            <Row label="Sexe" value={student.sexe === 'M' ? 'Masculin' : 'Feminin'} scale={scale} />
-            <Row label="Classe" value={student.classe} scale={scale} />
-            {student.tel && <Row label="N Tel" value={student.tel} scale={scale} />}
-            <Row label="N Matricule" value={student.matricule} scale={scale} bold color={theme} />
+            <div>{school.name}</div>
+            {school.adresse && <div style={{ fontSize: 14 * s, marginTop: 2 * s }}>{school.adresse}{school.telephone ? ` — Tél : ${school.telephone}` : ''}</div>}
+            {school.lieu && <div style={{ fontSize: 14 * s, marginTop: 2 * s }}>{school.lieu}</div>}
           </div>
 
-          {/* Photo + Signature */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 * scale, flexShrink: 0, width: 50 * scale }}>
-            <div style={{
-              width: 44 * scale, height: 58 * scale,
-              border: `${1.5 * scale}px solid ${theme}`,
-              borderRadius: 2 * scale,
-              overflow: 'hidden',
-              backgroundColor: '#f0f4f8',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {student.photoUrl
-                ? <img src={student.photoUrl} alt="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <User style={{ width: 22 * scale, height: 22 * scale, color: '#9ca3af' }} />
-              }
-            </div>
+          {/* Drapeau */}
+          <div style={{
+            width: 70 * s,
+            height: 70 * s,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+            {school.flagUrl
+              ? <img src={school.flagUrl} alt="Drapeau" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', overflow: 'hidden', border: `${0.5 * s}px solid #d1d5db` }}>
+                  <div style={{ width: '33.3%', background: '#008751' }} />
+                  <div style={{ width: '33.3%', background: '#FCD116' }} />
+                  <div style={{ width: '33.4%', background: '#E8112D' }} />
+                </div>
+            }
+          </div>
+        </div>
 
+        {/* ── TITRE ── */}
+        <div style={{
+          marginTop: 6 * s,
+          background: school.themeColor,
+          color: '#fff',
+          textAlign: 'center',
+          fontSize: 28 * s,
+          fontWeight: 800,
+          padding: `${6 * s}px ${10 * s}px`,
+          letterSpacing: 0.5,
+        }}>
+          CARTE D&apos;IDENTITE SCOLAIRE
+        </div>
+
+        {/* ── CONTENU ── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `1fr ${100 * s}px ${98 * s}px`,
+          gap: 14 * s,
+          marginTop: 10 * s,
+          alignItems: 'start',
+        }}>
+
+          {/* GAUCHE — champs */}
+          <div style={{ fontSize: 18 * s, lineHeight: 1.45 }}>
+            <Row label="Nom et prénoms" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.nom} {student.prenoms}</span>
+            </Row>
+            <Row label="Né(e) le" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.neLe}</span>
+              {student.lieuNaissance && <span style={{ fontSize: 17 * s }}> à {student.lieuNaissance}</span>}
+            </Row>
+            <Row label="Nationalité" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.nationalite || '—'}</span>
+            </Row>
+            <Row label="Sexe" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>
+                {student.sexe === 'M' ? 'Masculin' : student.sexe === 'F' ? 'Féminin' : '—'}
+              </span>
+            </Row>
+            <Row label="Classe" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.classe || '—'}</span>
+            </Row>
+            <Row label="N° Tél" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.tel || ''}</span>
+            </Row>
+            <Row label="N° Matricule" s={s}>
+              <span style={{ fontWeight: 700, fontSize: 17 * s }}>{student.matricule}</span>
+            </Row>
+          </div>
+
+          {/* CENTRE — signature */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+          }}>
             <div style={{
-              width: 44 * scale, height: 16 * scale,
-              border: `${scale}px solid #d1d5db`,
-              borderRadius: 2 * scale,
-              backgroundColor: '#f9fafb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 98 * s,
+              height: 70 * s,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              padding: 8 * s,
+              border: school.signatureUrl ? 'none' : `${1 * s}px dashed #bbb`,
             }}>
               {school.signatureUrl
-                ? <img src={school.signatureUrl} alt="sig" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                : <p style={{ fontSize: 4 * scale, color: '#9ca3af', textAlign: 'center', margin: 0, lineHeight: 1.3 }}>
-                    Signature{'\n'}du titulaire
-                  </p>
+                ? <img src={school.signatureUrl} alt="signature" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontStyle: 'italic', textDecoration: 'underline', fontSize: 11 * s, color: '#222' }}>Signature du titulaire</span>
               }
             </div>
           </div>
-        </div>
 
-        {/* FOOTER */}
-        <div style={{
-          backgroundColor: '#f1f5f9',
-          borderTop: `${scale}px solid #e2e8f0`,
-          padding: `${2 * scale}px ${6 * scale}px`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <p style={{ fontSize: 4.5 * scale, color: '#64748b', margin: 0 }}>
-            Delivre le : {school.dateCarteLabel}
-          </p>
-          {school.adresse && (
-            <p style={{ fontSize: 4 * scale, color: '#94a3b8', margin: 0 }}>{school.adresse}</p>
-          )}
-          <p style={{ fontSize: 4.5 * scale, color: theme, fontWeight: 'bold', margin: 0 }}>
-            {school.anneeScolaire}
-          </p>
+          {/* DROITE — photo + année */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8 * s,
+          }}>
+            {/* Date */}
+            <div style={{ fontSize: 13 * s, color: '#111', textAlign: 'center' }}>
+              {school.dateCarteLabel}
+            </div>
+
+            {/* Photo */}
+            <div style={{
+              width: 98 * s,
+              height: 118 * s,
+              background: '#ddd',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              {student.photoUrl
+                ? <img src={student.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <User style={{ width: 36 * s, height: 36 * s, color: '#9ca3af' }} />
+              }
+            </div>
+
+            {/* Année scolaire */}
+            <div style={{ textAlign: 'center', fontSize: 10 * s, lineHeight: 1.1 }}>
+              ANNEE SCOLAIRE
+              <strong style={{ display: 'block', fontSize: 18 * s }}>{school.anneeScolaire}</strong>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── QR CODE A COTE ── */}
+      {/* QR CODE — à côté de la carte */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 6 * scale,
-        paddingTop: 8 * scale,
-        flexShrink: 0,
+        gap: 6 * s,
+        paddingTop: 20 * s,
       }}>
         {qrCode ? (
           <>
-            <img
-              src={qrCode}
-              alt="QR Code"
-              style={{
-                width: 64 * scale,
-                height: 64 * scale,
-                border: `${scale}px solid #e2e8f0`,
-                borderRadius: 4 * scale,
-                padding: 3 * scale,
-                backgroundColor: '#fff',
-              }}
-            />
+            <div style={{
+              padding: 4 * s,
+              background: '#fff',
+              border: `${s}px solid #e2e8f0`,
+              borderRadius: 4 * s,
+              boxShadow: `0 ${1 * s}px ${4 * s}px rgba(0,0,0,0.08)`,
+            }}>
+              <img src={qrCode} alt="QR" style={{ width: 70 * s, height: 70 * s, display: 'block' }} />
+            </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 5.5 * scale, color: '#374151', fontWeight: 'bold', margin: 0 }}>
-                Scanner pour
-              </p>
-              <p style={{ fontSize: 5 * scale, color: '#6b7280', margin: 0 }}>
-                verifier l&apos;eleve
-              </p>
+              <p style={{ fontSize: 6 * s, color: '#374151', fontWeight: 'bold', margin: 0 }}>Scanner</p>
+              <p style={{ fontSize: 5 * s, color: '#6b7280', margin: 0 }}>pour vérifier</p>
             </div>
           </>
         ) : (
           <div style={{
-            width: 64 * scale, height: 64 * scale,
-            backgroundColor: '#f3f4f6',
-            borderRadius: 4 * scale,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 78 * s,
+            height: 78 * s,
+            background: '#f3f4f6',
+            borderRadius: 4 * s,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
-            <QrCode style={{ width: 28 * scale, height: 28 * scale, color: '#d1d5db' }} />
+            <QrCode style={{ width: 32 * s, height: 32 * s, color: '#d1d5db' }} />
           </div>
         )}
       </div>
@@ -226,21 +250,24 @@ export default function CardPreview({ student, school, scale = 1 }: CardPreviewP
   )
 }
 
-function Row({ label, value, scale, bold, color }: { label: string; value: string; scale: number; bold?: boolean; color?: string }) {
+function Row({ label, s, children }: { label: string; s: number; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: 2 * scale, alignItems: 'baseline' }}>
-      <span style={{ fontSize: 4.5 * scale, color: '#6b7280', flexShrink: 0, minWidth: 55 * scale, lineHeight: 1 }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 10 * s,
+      marginBottom: 8 * s,
+      flexWrap: 'wrap',
+    }}>
+      <span style={{
+        minWidth: 120 * s,
+        textDecoration: 'underline',
+        fontSize: 17 * s,
+        flexShrink: 0,
+      }}>
         {label} :
       </span>
-      <span style={{
-        fontSize: 5 * scale,
-        color: color ?? (bold ? '#000080' : '#111827'),
-        fontWeight: bold ? 'bold' : '500',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        lineHeight: 1,
-      }}>
-        {value || '-'}
-      </span>
+      {children}
     </div>
   )
 }

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Cartes d'Identité Scolaires</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="page-a4">
+        <div class="card">
+            <header>
+                <div class="header-top">
+                    <img src="logo.png" alt="Logo" class="school-logo">
+                    <div class="school-info">
+                        <p class="school-name">Collège Privé d'Enseignement Général "Gloria Dei"</p>
+                        <p class="school-addr">04 BP 205 Cotonou, Téléphone : (+229) 67 17 37 81</p>
+                        <p class="school-loc">Gakpè (Ouidah)</p>
+                    </div>
+                    <img src="flag-benin.png" alt="Bénin" class="flag">
+                </div>
+                <div class="title-banner">CARTE D'IDENTITÉ SCOLAIRE</div>
+            </header>
+
+            <div class="card-body">
+                <div class="student-details">
+                    <p><strong>Nom et prénoms :</strong> <span class="data">NOM Prénom</span></p>
+                    <div class="row">
+                        <p><strong>Né(e) le :</strong> <span class="data">00/00/0000</span></p>
+                        <p><strong>à :</strong> <span class="data">Ville</span></p>
+                    </div>
+                    <p><strong>Nationalité :</strong> <span class="data">Béninoise</span></p>
+                    <div class="row">
+                        <p><strong>Sexe :</strong> <span class="data">M</span></p>
+                        <p><strong>Classe :</strong> <span class="data">CM2</span></p>
+                    </div>
+                    <p><strong>N° Matricule :</strong> <span class="data">2x11545</span></p>
+                </div>
+                
+                <div class="photo-and-sign">
+                    <div class="photo-box">Photo</div>
+                    <div class="signature-box">Signature du titulaire</div>
+                    <div class="academic-year">ANNÉE SCOLAIRE<br><strong>2024-2025</strong></div>
+                </div>
+            </div>
+        </div>
+        </div>
+</body>
+</html>
+<style>
+    /* Configuration de la page A4 */
+@page {
+    size: A4;
+    margin: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+.page-a4 {
+    width: 210mm;
+    height: 297mm;
+    padding: 5mm;
+    margin: auto;
+    background: white;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 colonnes */
+    grid-template-rows: repeat(4, 1fr);    /* 4 lignes */
+    gap: 5mm; /* Espace entre les cartes */
+    box-sizing: border-box;
+}
+
+/* Style de la carte */
+.card {
+    border: 1px solid #000;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    font-size: 9px;
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.school-logo, .flag {
+    width: 30px;
+    height: auto;
+}
+
+.school-name {
+    font-weight: bold;
+    font-size: 8px;
+    margin: 0;
+}
+
+.school-addr, .school-loc {
+    font-size: 6px;
+    margin: 0;
+}
+
+.title-banner {
+    background-color: darkblue;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding: 3px 0;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+/* Corps de la carte */
+.card-body {
+    display: flex;
+    margin-top: 5px;
+    height: 100%;
+}
+
+.student-details {
+    flex: 2;
+}
+
+.student-details p {
+    margin: 3px 0;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+}
+
+.data {
+    border-bottom: 1px dotted #333;
+    display: inline-block;
+    min-width: 50px;
+}
+
+/* Zone Photo et Signature */
+.photo-and-sign {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.photo-box {
+    width: 65px;
+    height: 75px;
+    border: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eee;
+}
+
+.signature-box {
+    font-size: 7px;
+    border: 1px solid #ccc;
+    width: 100%;
+    height: 30px;
+    text-align: center;
+    padding-top: 2px;
+    color: #555;
+}
+
+.academic-year {
+    text-align: center;
+    font-size: 8px;
+}
+</style>

@@ -1,12 +1,15 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
 import { validateStudents } from '@/lib/excel'
 import Button from '@/components/ui/Button'
 import { AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react'
 
 export default function ValidationPanel() {
   const { students, validationErrors, setValidationErrors, setActiveStep } = useStore()
+  const { user } = useAuth()
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const errors = validateStudents(students)
@@ -15,8 +18,28 @@ export default function ValidationPanel() {
 
   const duplicates = validationErrors.filter((e) => e.type === 'duplicate_matricule').length
   const missingFields = validationErrors.filter((e) => e.type === 'missing_field').length
-
   const canContinue = missingFields === 0 && duplicates === 0
+
+  const handleContinue = async () => {
+    if (!canContinue) return
+    // Save students to DB before proceeding
+    if (user?.schoolId && students.length > 0) {
+      setSaving(true)
+      try {
+        await fetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ schoolId: user.schoolId, students }),
+        })
+      } catch (e) {
+        console.error('[ValidationPanel] save error', e)
+      } finally {
+        setSaving(false)
+      }
+    }
+    setActiveStep(3)
+  }
 
   return (
     <div className="space-y-6">
@@ -72,10 +95,10 @@ export default function ValidationPanel() {
 
       <div className="flex justify-between">
         <Button variant="ghost" onClick={() => setActiveStep(1)}>Retour</Button>
-        <Button disabled={!canContinue} onClick={() => setActiveStep(3)}>
+        <Button disabled={!canContinue || saving} loading={saving} onClick={handleContinue}>
           {canContinue ? (
             <>
-              Continuer <ArrowRight size={16} />
+              {saving ? 'Sauvegarde...' : 'Continuer'} {!saving && <ArrowRight size={16} />}
             </>
           ) : (
             'Corrigez les erreurs pour continuer'

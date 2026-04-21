@@ -40,6 +40,7 @@ model School {
   users      User[]
   students   Student[]
   history    GenerationHistory[]
+  projects   Project[]
 
   @@map("schools")
 }
@@ -57,6 +58,7 @@ model Student {
   tel            String?
   photoUrl       String?  @db.Text
   schoolId       String
+  projectId      String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -76,6 +78,20 @@ model GenerationHistory {
   school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("generation_history")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  schoolId    String
+  name        String
+  description String?
+  studentCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("projects")
 }
 
 enum Role {

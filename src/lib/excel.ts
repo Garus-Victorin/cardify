@@ -32,14 +32,16 @@ export function mapRowsToStudents(
     schoolId,
     matricule: String(row[mapping.matricule] ?? '').trim(),
     nom: String(row[mapping.nom] ?? '').trim(),
-    prenoms: String(row[mapping.prenoms] ?? '').trim(),
-    neLe: String(row[mapping.neLe] ?? '').trim(),
-    lieuNaissance: String(row[mapping.lieuNaissance] ?? '').trim(),
-    nationalite: String(row[mapping.nationalite] ?? '').trim(),
-    sexe: (String(row[mapping.sexe] ?? 'M').trim().toUpperCase() === 'F' ? 'F' : 'M') as 'M' | 'F',
-    classe: String(row[mapping.classe] ?? '').trim(),
-    tel: mapping.tel ? String(row[mapping.tel] ?? '').trim() : undefined,
-    photoUrl: mapping.photo ? String(row[mapping.photo] ?? '').trim() : undefined,
+    prenoms: mapping.prenoms ? String(row[mapping.prenoms] ?? '').trim() : '',
+    neLe: mapping.neLe ? String(row[mapping.neLe] ?? '').trim() : '',
+    lieuNaissance: mapping.lieuNaissance ? String(row[mapping.lieuNaissance] ?? '').trim() : '',
+    nationalite: mapping.nationalite ? String(row[mapping.nationalite] ?? '').trim() : '',
+    sexe: mapping.sexe
+      ? (String(row[mapping.sexe] ?? 'M').trim().toUpperCase() === 'F' ? 'F' : 'M') as 'M' | 'F'
+      : 'M',
+    classe: mapping.classe ? String(row[mapping.classe] ?? '').trim() : '',
+    tel: mapping.tel ? String(row[mapping.tel] ?? '').trim() || undefined : undefined,
+    photoUrl: mapping.photo ? String(row[mapping.photo] ?? '').trim() || undefined : undefined,
   }))
 }
 
@@ -48,7 +50,8 @@ export function validateStudents(students: Student[]): ValidationError[] {
   const matricules = new Map<string, number>()
 
   students.forEach((s, i) => {
-    const required: (keyof Student)[] = ['matricule', 'nom', 'prenoms', 'neLe', 'classe']
+    // Only matricule and nom are truly required
+    const required: (keyof Student)[] = ['matricule', 'nom']
     required.forEach((field) => {
       if (!s[field]) {
         errors.push({
@@ -62,22 +65,13 @@ export function validateStudents(students: Student[]): ValidationError[] {
     if (s.matricule) {
       matricules.set(s.matricule, (matricules.get(s.matricule) ?? 0) + 1)
     }
-
-    if (!s.photoUrl) {
-      errors.push({
-        type: 'missing_photo',
-        message: `Photo manquante pour ${s.nom} ${s.prenoms} (${s.matricule})`,
-        studentId: s.id,
-        matricule: s.matricule,
-      })
-    }
   })
 
   matricules.forEach((count, matricule) => {
     if (count > 1) {
       errors.push({
         type: 'duplicate_matricule',
-        message: `Matricule dupliqué : ${matricule} (${count} fois)`,
+        message: `Matricule duplique : ${matricule} (${count} fois)`,
         matricule,
       })
     }

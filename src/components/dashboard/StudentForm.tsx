@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
 import { fileToDataUrl, nanoid } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { Student } from '@/types'
@@ -21,6 +22,8 @@ const EMPTY_FORM = {
 
 export default function StudentForm() {
   const { students, setStudents, school, setActiveStep } = useStore()
+  const { user } = useAuth()
+  const schoolId = user?.schoolId ?? school.id
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [editId, setEditId] = useState<string | null>(null)
@@ -65,7 +68,7 @@ export default function StudentForm() {
     } else {
       const newStudent: Student = {
         id: nanoid(),
-        schoolId: school.id,
+        schoolId,
         ...form,
         photoUrl: form.photoUrl || undefined,
       }
