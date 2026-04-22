@@ -54,87 +54,78 @@ interface MatchResult {
 function matchPhotoToStudent(photoName: string, students: Student[]): MatchResult | null {
   const pn = normalize(photoName)
   const ptokens = tokens(photoName)
-  let best: MatchResult | null = null
 
-  function update(candidate: MatchResult): void {
-    if (best === null || candidate.score > best.score) best = candidate
+  const results: MatchResult[] = []
+
+  const push = (student: Student, score: number, method: string) => {
+    results.push({ student, score, method })
   }
 
   for (const s of students) {
-    const mat  = normalize(s.matricule)
-    const nom  = normalize(s.nom)
-    const pre  = normalize(s.prenoms)
-    const full1 = nom + pre          // NOMPRENOM
-    const full2 = pre + nom          // PRENOMNOM
-    const full3 = nom + ' ' + pre    // NOM PRENOM (normalized → same as full1)
+    const mat   = normalize(s.matricule)
+    const nom   = normalize(s.nom)
+    const pre   = normalize(s.prenoms)
+    const full1 = nom + pre
+    const full2 = pre + nom
     const parts = [mat, nom, pre, full1, full2]
 
-    // ── Niveau 1 : correspondance exacte (score 1.0) ──
+    // ── Niveau 1 : exact ──
     for (const part of parts) {
       if (part && pn === part) {
-        return { student: s, score: 1.0, method: `exact (${part === mat ? 'matricule' : part === nom ? 'nom' : part === pre ? 'prénom' : 'nom complet'})` }
+        const label = part === mat ? 'matricule' : part === nom ? 'nom' : part === pre ? 'prénom' : 'nom complet'
+        return { student: s, score: 1.0, method: `exact (${label})` }
       }
     }
 
-    // ── Niveau 2 : le nom de fichier CONTIENT exactement un identifiant ──
-    if (mat && mat.length >= 3 && pn.includes(mat)) {
-      update({ student: s, score: 0.95, method: 'matricule contenu dans fichier' })
-    }
-    if (nom && nom.length >= 3 && pn.includes(nom)) {
-      update({ student: s, score: 0.90, method: 'nom contenu dans fichier' })
-    }
-    if (pre && pre.length >= 3 && pn.includes(pre)) {
-      update({ student: s, score: 0.88, method: 'prénom contenu dans fichier' })
-    }
+    // ── Niveau 2 : contenu ──
+    if (mat.length >= 3 && pn.includes(mat)) push(s, 0.95, 'matricule contenu dans fichier')
+    if (nom.length >= 3 && pn.includes(nom)) push(s, 0.90, 'nom contenu dans fichier')
+    if (pre.length >= 3 && pn.includes(pre)) push(s, 0.88, 'prénom contenu dans fichier')
 
-    // ── Niveau 3 : tokens du fichier couvrent nom + prénom ──
+    // ── Niveau 3 : tokens ──
     const hasNom = ptokens.some((t) => t === nom || similarity(t, nom) > 0.85)
     const hasPre = ptokens.some((t) => t === pre || similarity(t, pre) > 0.85)
     const hasMat = ptokens.some((t) => t === mat || similarity(t, mat) > 0.88)
 
-    if (hasNom && hasPre) {
-      update({ student: s, score: 0.97, method: 'nom + prénom dans tokens' })
-    }
-    if (hasMat && hasNom) {
-      update({ student: s, score: 0.96, method: 'matricule + nom dans tokens' })
-    }
-    if (hasMat && hasPre) {
-      update({ student: s, score: 0.94, method: 'matricule + prénom dans tokens' })
-    }
-    if (hasMat) {
-      update({ student: s, score: 0.92, method: 'matricule dans tokens' })
-    }
+    if (hasNom && hasPre) push(s, 0.97, 'nom + prénom dans tokens')
+    if (hasMat && hasNom) push(s, 0.96, 'matricule + nom dans tokens')
+    if (hasMat && hasPre) push(s, 0.94, 'matricule + prénom dans tokens')
+    if (hasMat)           push(s, 0.92, 'matricule dans tokens')
 
-    // ── Niveau 4 : similarité fuzzy globale ──
-    const candidates = [
-      { val: mat,   label: 'matricule fuzzy',    threshold: 0.82 },
-      { val: nom,   label: 'nom fuzzy',          threshold: 0.78 },
-      { val: pre,   label: 'prénom fuzzy',       threshold: 0.78 },
-      { val: full1, label: 'nom+prénom fuzzy',   threshold: 0.80 },
-      { val: full2, label: 'prénom+nom fuzzy',   threshold: 0.80 },
+    // ── Niveau 4 : fuzzy global ──
+    const fuzzy: Array<{ val: string; label: string; threshold: number }> = [
+      { val: mat,   label: 'matricule fuzzy',  threshold: 0.82 },
+      { val: nom,   label: 'nom fuzzy',        threshold: 0.78 },
+      { val: pre,   label: 'prénom fuzzy',     threshold: 0.78 },
+      { val: full1, label: 'nom+prénom fuzzy', threshold: 0.80 },
+      { val: full2, label: 'prénom+nom fuzzy', threshold: 0.80 },
     ]
-    for (const { val, label, threshold } of candidates) {
+    for (const { val, label, threshold } of fuzzy) {
       if (!val) continue
       const sc = similarity(pn, val)
-      if (sc >= threshold) update({ student: s, score: sc * 0.95, method: label })
+      if (sc >= threshold) push(s, sc * 0.95, label)
     }
 
-    // ── Niveau 5 : meilleur token du fichier vs identifiants ──
+    // ── Niveau 5 : meilleur token ──
     for (const tok of ptokens) {
       if (tok.length < 3) continue
-      const scores = [
+      const tokenScores: Array<{ sc: number; label: string }> = [
         { sc: similarity(tok, mat), label: 'token~matricule' },
         { sc: similarity(tok, nom), label: 'token~nom' },
         { sc: similarity(tok, pre), label: 'token~prénom' },
       ]
-      for (const { sc, label } of scores) {
-        if (sc >= 0.85) update({ student: s, score: sc * 0.88, method: label })
+      for (const { sc, label } of tokenScores) {
+        if (sc >= 0.85) push(s, sc * 0.88, label)
       }
     }
   }
 
-  // Seuil minimum de confiance
-  return best && best.score >= 0.72 ? best : null
+  // Meilleur résultat au-dessus du seuil
+  const best = results.reduce<MatchResult | null>((acc, cur) =>
+    acc === null || cur.score > acc.score ? cur : acc
+  , null)
+
+  return best !== null && best.score >= 0.72 ? best : null
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
