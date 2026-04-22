@@ -13,7 +13,7 @@ import GenerationHistory from '@/components/dashboard/GenerationHistory'
 import Badge from '@/components/ui/Badge'
 import { useAuth } from '@/hooks/useAuth'
 import { useSync } from '@/hooks/useSync'
-import { RotateCcw, Settings, GraduationCap, LogOut, User, Menu, X, History, ChevronDown } from 'lucide-react'
+import { RotateCcw, Settings, GraduationCap, LogOut, User, Menu, X, History, ChevronDown, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
@@ -30,6 +30,12 @@ const STEP_TITLES = [
   'Validation',
   'Prévisualisation',
   'Export PDF',
+]
+
+const TABS = [
+  { key: 'pipeline' as Tab, label: 'Pipeline',   icon: GraduationCap },
+  { key: 'settings' as Tab, label: 'Paramètres', icon: Settings },
+  { key: 'history'  as Tab, label: 'Historique', icon: Clock },
 ]
 
 const STEP_SLUGS = ['import', 'mapping', 'validation', 'preview', 'export']
@@ -288,6 +294,22 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
 
+        {/* Navbar */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex border-t border-slate-100">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => { setTab(key); setMenuOpen(false) }}
+              className={`flex items-center gap-1.5 px-4 py-3 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                tab === key
+                  ? 'border-[#1e3a5f] text-[#1e3a5f]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <Icon size={14} /> {label}
+            </button>
+          ))}
+        </div>
 
       </header>
 

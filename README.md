@@ -158,3 +158,7 @@ npm run start
 ```
 
 Déploiement recommandé sur [Vercel](https://vercel.com) avec une base Neon. Ajouter les variables d'environnement `DATABASE_URL` et `JWT_SECRET` dans les paramètres du projet.
+
+
+
+Build Command : prisma generate && next build
