@@ -56,8 +56,8 @@ function matchPhotoToStudent(photoName: string, students: Student[]): MatchResul
   const ptokens = tokens(photoName)
   let best: MatchResult | null = null
 
-  const update = (candidate: MatchResult) => {
-    if (!best || candidate.score > best.score) best = candidate
+  function update(candidate: MatchResult): void {
+    if (best === null || candidate.score > best.score) best = candidate
   }
 
   for (const s of students) {
