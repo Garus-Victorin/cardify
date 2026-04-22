@@ -2,17 +2,37 @@ import * as XLSX from 'xlsx'
 import type { ColumnMapping, Student, ValidationError } from '@/types'
 import { nanoid } from './utils'
 
+function formatCellValue(v: unknown): string {
+  if (v instanceof Date) {
+    const d = String(v.getDate()).padStart(2, '0')
+    const m = String(v.getMonth() + 1).padStart(2, '0')
+    const y = v.getFullYear()
+    return `${d}/${m}/${y}`
+  }
+  return String(v ?? '')
+}
+
+function capitalize(str: string): string {
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+}
+
 export function parseExcelHeaders(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target!.result as ArrayBuffer)
-        const wb = XLSX.read(data, { type: 'array' })
+        const wb = XLSX.read(data, { type: 'array', cellDates: true })
         const ws = wb.Sheets[wb.SheetNames[0]]
-        const json = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' })
+        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
         const headers = json.length > 0 ? Object.keys(json[0]) : []
-        resolve({ headers, rows: json })
+        const rows = json.map((row) =>
+          Object.fromEntries(
+            Object.entries(row).map(([k, v]) => [k, formatCellValue(v)])
+          )
+        )
+        resolve({ headers, rows })
       } catch (err) {
         reject(err)
       }
@@ -34,8 +54,8 @@ export function mapRowsToStudents(
     nom: String(row[mapping.nom] ?? '').trim(),
     prenoms: mapping.prenoms ? String(row[mapping.prenoms] ?? '').trim() : '',
     neLe: mapping.neLe ? String(row[mapping.neLe] ?? '').trim() : '',
-    lieuNaissance: mapping.lieuNaissance ? String(row[mapping.lieuNaissance] ?? '').trim() : '',
-    nationalite: mapping.nationalite ? String(row[mapping.nationalite] ?? '').trim() : '',
+    lieuNaissance: mapping.lieuNaissance ? capitalize(String(row[mapping.lieuNaissance] ?? '').trim()) : '',
+    nationalite: mapping.nationalite ? capitalize(String(row[mapping.nationalite] ?? '').trim()) : '',
     sexe: mapping.sexe
       ? (String(row[mapping.sexe] ?? 'M').trim().toUpperCase() === 'F' ? 'F' : 'M') as 'M' | 'F'
       : 'M',

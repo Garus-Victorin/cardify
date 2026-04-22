@@ -27,14 +27,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payload invalide' }, { status: 400 })
     }
 
-    // Ensure school exists
-    await prisma.school.upsert({
+    // Create or get school (separate from transaction)
+    const school = await prisma.school.upsert({
       where: { id: schoolId },
       update: {},
       create: { id: schoolId, name: 'Mon Ecole' },
     })
 
-    // Delete existing students for this school then re-insert (bulk replace)
+    // Delete existing students for this school then re-insert (separate operations)
     await prisma.student.deleteMany({ where: { schoolId } })
 
     const created = await prisma.student.createMany({

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useStore } from '@/store'
 import { useAuth } from '@/hooks/useAuth'
 import { mapRowsToStudents } from '@/lib/excel'
-import { ArrowRight, Wand2, CheckCircle2, Circle, AlertCircle, ChevronDown, Check, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, AlertCircle, ChevronDown, Check, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as Select from '@radix-ui/react-select'
 
@@ -17,7 +17,6 @@ const FIELDS = [
   { key: 'sexe',          label: 'Sexe',                required: false },
   { key: 'classe',        label: 'Classe',              required: false },
   { key: 'tel',           label: 'N° Téléphone',        required: false },
-  { key: 'photo',         label: 'Photo (nom fichier)', required: false },
 ] as const
 
 export default function ColumnMapper() {
@@ -30,23 +29,96 @@ export default function ColumnMapper() {
 
   const autoDetect = () => {
     const auto: Record<string, string> = {}
-    const patterns: Record<string, RegExp> = {
-      matricule:     /matricule|mat[^r]|n[°o]\s*mat/i,
-      nom:           /^nom$/i,
-      prenoms:       /pr[eé]nom/i,
-      neLe:          /n[eé]\s*(le|date)|date.*naiss|naiss.*date/i,
-      lieuNaissance: /lieu|naiss/i,
-      nationalite:   /national/i,
-      sexe:          /sexe|genre/i,
-      classe:        /classe|niveau|section/i,
-      tel:           /t[eé]l|phone|contact|mobile/i,
-      photo:         /photo|image|fichier/i,
+    
+    // Patterns avec score de priorité (plus le score est élevé, plus le match est précis)
+    const patterns: Record<string, Array<{ regex: RegExp; score: number }>> = {
+      matricule: [
+        { regex: /^matricule$/i, score: 100 },
+        { regex: /^n[°o]\s*matricule$/i, score: 90 },
+        { regex: /matricule/i, score: 70 },
+        { regex: /^mat$/i, score: 60 },
+        { regex: /n[°o]\s*mat/i, score: 50 },
+      ],
+      nom: [
+        { regex: /^nom$/i, score: 100 },
+        { regex: /^nom\s+de\s+famille$/i, score: 90 },
+        { regex: /famille/i, score: 50 },
+      ],
+      prenoms: [
+        { regex: /^pr[eé]noms?$/i, score: 100 },
+        { regex: /pr[eé]noms?/i, score: 80 },
+        { regex: /first\s*name/i, score: 70 },
+      ],
+      neLe: [
+        { regex: /^n[eé]\s*le$/i, score: 100 },
+        { regex: /^date\s*de\s*naissance$/i, score: 100 },
+        { regex: /^date\s*naiss/i, score: 90 },
+        { regex: /^naissance$/i, score: 80 },
+        { regex: /date.*naiss/i, score: 70 },
+        { regex: /naiss.*date/i, score: 70 },
+        { regex: /birth.*date/i, score: 60 },
+      ],
+      lieuNaissance: [
+        { regex: /^lieu\s*de\s*naissance$/i, score: 100 },
+        { regex: /^lieu\s*naiss/i, score: 90 },
+        { regex: /^lieu$/i, score: 80 },
+        { regex: /lieu.*naiss/i, score: 70 },
+        { regex: /place.*birth/i, score: 60 },
+      ],
+      nationalite: [
+        { regex: /^nationalit[eé]$/i, score: 100 },
+        { regex: /nationalit[eé]/i, score: 80 },
+        { regex: /nationality/i, score: 70 },
+        { regex: /pays/i, score: 50 },
+      ],
+      sexe: [
+        { regex: /^sexe$/i, score: 100 },
+        { regex: /^genre$/i, score: 90 },
+        { regex: /sexe|genre/i, score: 70 },
+        { regex: /gender/i, score: 60 },
+      ],
+      classe: [
+        { regex: /^classe$/i, score: 100 },
+        { regex: /^niveau$/i, score: 90 },
+        { regex: /classe|niveau|section/i, score: 70 },
+        { regex: /class|grade/i, score: 60 },
+      ],
+      tel: [
+        { regex: /^t[eé]l[eé]phone$/i, score: 100 },
+        { regex: /^t[eé]l$/i, score: 90 },
+        { regex: /^mobile$/i, score: 90 },
+        { regex: /^contact$/i, score: 80 },
+        { regex: /t[eé]l|phone|mobile/i, score: 70 },
+      ],
+      photo: [
+        { regex: /^photo$/i, score: 100 },
+        { regex: /^image$/i, score: 90 },
+        { regex: /photo|image|fichier/i, score: 70 },
+      ],
     }
-    rawHeaders.forEach((h) => {
-      Object.entries(patterns).forEach(([field, regex]) => {
-        if (!auto[field] && regex.test(h)) auto[field] = h
+
+    // Pour chaque champ, trouver la meilleure colonne
+    Object.entries(patterns).forEach(([field, patternList]) => {
+      let bestMatch: { header: string; score: number } | null = null
+
+      rawHeaders.forEach((header) => {
+        // Tester tous les patterns pour ce header
+        patternList.forEach(({ regex, score }) => {
+          if (regex.test(header)) {
+            // Si ce match est meilleur que le précédent, on le garde
+            if (!bestMatch || score > bestMatch.score) {
+              bestMatch = { header, score }
+            }
+          }
+        })
       })
+
+      // Assigner le meilleur match trouvé
+      if (bestMatch) {
+        auto[field] = bestMatch.header
+      }
     })
+
     setMapping(auto)
   }
 

@@ -158,7 +158,7 @@ export default function ExcelUploader() {
             <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
               <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Aperçu des données</span>
-                <span className="text-xs text-slate-400">5 premières lignes</span>
+                <span className="text-xs text-slate-400">{rows.length} lignes</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -172,7 +172,7 @@ export default function ExcelUploader() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {rows.slice(0, 5).map((row, i) => (
+                    {rows.map((row, i) => (
                       <motion.tr
                         key={i}
                         initial={{ opacity: 0, x: -8 }}
@@ -190,11 +190,7 @@ export default function ExcelUploader() {
                   </tbody>
                 </table>
               </div>
-              {rows.length > 5 && (
-                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
-                  <span className="text-xs text-slate-400">+ {rows.length - 5} autres lignes non affichées</span>
-                </div>
-              )}
+
             </div>
 
             {/* CTA */}

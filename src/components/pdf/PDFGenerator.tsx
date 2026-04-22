@@ -23,7 +23,7 @@ function DownloadButton({ students, school, qrCodes, fileName, onReset }: Downlo
   const buildBlob = async () => {
     const { pdf } = await import('@react-pdf/renderer')
     const { default: Doc } = await import('./CardifyDocument')
-    return pdf(<Doc students={students} school={school} qrCodes={qrCodes} />).toBlob()
+    return pdf(<Doc students={students} school={school} />).toBlob()
   }
 
   const handleDownload = async () => {
@@ -193,12 +193,12 @@ export default function PDFGenerator() {
           <p className="text-xs text-gray-500 mt-1">Eleves a exporter</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-gray-700">{Math.ceil(exportStudents.length / 3)}</p>
+          <p className="text-2xl font-bold text-gray-700">{Math.ceil(exportStudents.length / 8)}</p>
           <p className="text-xs text-gray-500 mt-1">Pages A4</p>
         </div>
         <div className="bg-green-50 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">3</p>
-          <p className="text-xs text-gray-500 mt-1">Cartes par page</p>
+          <p className="text-2xl font-bold text-green-600">8</p>
+          <p className="text-xs text-gray-500 mt-1">Cartes par page (2×4)</p>
         </div>
       </div>
 

@@ -6,10 +6,11 @@ import Button from '@/components/ui/Button'
 import { getUniqueClasses, fileToDataUrl } from '@/lib/utils'
 import {
   Search, FileDown, Edit2, X, Check, User, Upload,
-  ChevronLeft, ChevronRight, Filter, AlertCircle, PlusCircle,
-  LayoutGrid, Eye
+  ChevronLeft, ChevronRight, Filter, AlertCircle,
+  LayoutGrid, Eye, Images,
 } from 'lucide-react'
 import type { Student, School } from '@/types'
+import PhotoImporter from './PhotoImporter'
 
 const FIELDS: { key: keyof Student; label: string; type?: string }[] = [
   { key: 'matricule',     label: 'N Matricule' },
@@ -36,6 +37,19 @@ function CardGallery({ students, school, onClose }: {
   const [focusId, setFocusId] = useState<string | null>(null)
   const [filterClasse, setFilterClasse] = useState('')
   const [search, setSearch] = useState('')
+  const [pdfLoading, setPdfLoading] = useState(false)
+
+  const handlePdfPreview = async () => {
+    setPdfLoading(true)
+    try {
+      const { pdf } = await import('@react-pdf/renderer')
+      const { default: Doc } = await import('@/components/pdf/CardifyDocument')
+      const blob = await pdf(<Doc students={filtered} school={school} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    } catch (e) { console.error(e) }
+    finally { setPdfLoading(false) }
+  }
 
   const classes = getUniqueClasses(students)
 
@@ -73,9 +87,11 @@ function CardGallery({ students, school, onClose }: {
             <p className="text-gray-400 text-xs">{filtered.length} carte(s) · {pages.length} page(s) · 2×4 par page</p>
           </div>
         </div>
-        <button onClick={onClose} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors">
-          <X size={15} /> Fermer
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onClose} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors">
+            <X size={15} /> Fermer
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -184,7 +200,6 @@ function CardGallery({ students, school, onClose }: {
               </div>
             </div>
           ))}
-
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-gray-500">
               <Search size={40} className="mb-3 opacity-30" />
@@ -202,7 +217,6 @@ export default function StudentList() {
   const [index, setIndex] = useState(0)
   const [editField, setEditField] = useState<keyof Student | null>(null)
   const [editValue, setEditValue] = useState('')
-  const [editPhotoMode, setEditPhotoMode] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
 
   const classes = getUniqueClasses(students)
@@ -216,7 +230,7 @@ export default function StudentList() {
   const current = filtered[safeIndex]
   const missingCount = current ? FIELDS.filter(({ key }) => key !== 'tel' && isMissing(current, key)).length : 0
 
-  const goTo = (i: number) => { setIndex(Math.max(0, Math.min(i, filtered.length - 1))); setEditField(null); setEditPhotoMode(false) }
+  const goTo = (i: number) => { setIndex(Math.max(0, Math.min(i, filtered.length - 1))); setEditField(null) }
   const startEdit = (field: keyof Student) => { setEditField(field); setEditValue(String(current?.[field] ?? '')) }
   const saveField = () => {
     if (!editField || !current) return
@@ -244,6 +258,12 @@ export default function StudentList() {
       {showGallery && <CardGallery students={filtered} school={school} onClose={() => setShowGallery(false)} />}
 
       <div className="space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+          <div className="flex items-center gap-2 text-slate-600 font-semibold text-sm">
+            <Images size={15} /> Import de photos
+          </div>
+          <PhotoImporter />
+        </div>
         <Filters {...{ searchQuery, setSearchQuery, selectedClasse, setSelectedClasse, classes, count: filtered.length }} />
 
         <div className="flex flex-col xl:flex-row gap-8 items-start">
@@ -333,24 +353,18 @@ export default function StudentList() {
                 })}
 
                 {/* Photo */}
-                <div className={`flex items-center gap-2 py-2 px-3 rounded-lg group border transition-all ${!current.photoUrl ? 'border-orange-200 bg-orange-50' : 'border-transparent hover:bg-gray-50 hover:border-gray-200'}`}>
+                <div className={`flex items-center gap-2 py-2 px-3 rounded-lg border transition-all ${!current.photoUrl ? 'border-orange-200 bg-orange-50' : 'border-transparent hover:bg-gray-50 hover:border-gray-200'}`}>
                   <span className={`text-xs w-36 flex-shrink-0 ${!current.photoUrl ? 'text-orange-500 font-medium' : 'text-gray-500'}`}>Photo{!current.photoUrl && ' *'}</span>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 border border-gray-300 flex-shrink-0">
                       {current.photoUrl ? <img src={current.photoUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><User size={14} className="text-gray-400" /></div>}
                     </div>
-                    <span className={`text-xs ${current.photoUrl ? 'text-gray-500' : 'text-orange-400 italic'}`}>{current.photoUrl ? 'Photo importee' : 'Aucune photo'}</span>
+                    <span className={`text-xs ${current.photoUrl ? 'text-gray-500' : 'text-orange-400 italic'}`}>{current.photoUrl ? 'Photo importée' : 'Aucune photo'}</span>
                   </div>
-                  {editPhotoMode ? (
-                    <label className="cursor-pointer flex items-center gap-1.5 text-xs text-[#1e3a5f] border border-[#1e3a5f] px-2 py-1 rounded-lg hover:bg-blue-50 flex-shrink-0">
-                      <Upload size={12} /> Choisir
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f) }} />
-                    </label>
-                  ) : (
-                    <button onClick={() => setEditPhotoMode(true)} className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${!current.photoUrl ? 'opacity-100 text-orange-400 hover:text-orange-600 hover:bg-orange-100' : 'opacity-0 group-hover:opacity-100 text-gray-400 hover:text-[#1e3a5f] hover:bg-blue-50'}`}>
-                      {!current.photoUrl ? <PlusCircle size={14} /> : <Edit2 size={13} />}
-                    </button>
-                  )}
+                  <label className="cursor-pointer flex items-center gap-1.5 text-xs text-[#1e3a5f] border border-[#1e3a5f]/30 bg-[#1e3a5f]/5 hover:bg-[#1e3a5f]/10 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0">
+                    <Upload size={12} /> {current.photoUrl ? 'Changer' : 'Importer'}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f) }} />
+                  </label>
                 </div>
               </div>
             </div>

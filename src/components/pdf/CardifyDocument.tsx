@@ -3,256 +3,231 @@ import * as PDF from '@react-pdf/renderer'
 import type { Student, School } from '@/types'
 import { chunkArray } from '@/lib/utils'
 
-const ce = React.createElement
-function PdfDoc(p: React.ComponentProps<typeof PDF.Document>) { return ce(PDF.Document as unknown as React.ElementType, p) }
-function PdfPage(p: React.ComponentProps<typeof PDF.Page>) { return ce(PDF.Page as unknown as React.ElementType, p) }
-function PdfView(p: React.ComponentProps<typeof PDF.View>) { return ce(PDF.View as unknown as React.ElementType, p) }
-function PdfText(p: React.ComponentProps<typeof PDF.Text>) { return ce(PDF.Text as unknown as React.ElementType, p) }
-function PdfImage(p: React.ComponentProps<typeof PDF.Image>) { return ce(PDF.Image as unknown as React.ElementType, p) }
+const { Document, Page, View, Text, Image, StyleSheet } = PDF
 
-const BLUE = '#003087'
+// A4 : 595 x 842 pt
+// Marges : 20pt chaque côté → usable width = 555pt
+// 2 cartes par ligne + gap 12pt → chaque carte = (555 - 12) / 2 = 271.5pt
+// 4 lignes + 3 gaps de 10pt → hauteur max par carte = (842 - 40 - 30) / 4 - 7.5 ≈ 185pt
 
-// Card: 210 x 133 pt (A4 width / 2 with margins, ratio ~1.58)
-const CARD_W = 210
-const CARD_H = 133
+const PAGE_PAD   = 20
+const COL_GAP    = 12
+const ROW_GAP    = 10
+const USABLE_W   = 595 - PAGE_PAD * 2          // 555
+const CARD_W     = (USABLE_W - COL_GAP) / 2    // 271.5
+const CARD_H     = 185
 
-const S = PDF.StyleSheet.create({
+const S = StyleSheet.create({
   page: {
-    backgroundColor: '#f0f2f5',
-    padding: '20pt 15pt',
-    flexDirection: 'column',
-    gap: 14,
+    padding: PAGE_PAD,
+    backgroundColor: '#f5f7fa',
   },
-  pageRow: {
+  pageHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
+  pageLabel: { fontSize: 8, color: '#888', fontWeight: 'bold' },
+  separator:  { flex: 1, height: 0.5, backgroundColor: '#d1d5db', marginHorizontal: 6 },
+  pageCount:  { fontSize: 7, color: '#aaa' },
+
+  // Grille : 4 rows × 2 cols
+  row: {
+    flexDirection: 'row',
+    gap: COL_GAP,
+    marginBottom: ROW_GAP,
+  },
+
+  // Carte
   card: {
     width: CARD_W,
     height: CARD_H,
     backgroundColor: '#ffffff',
-    border: '1pt solid #c0c8d8',
-    borderRadius: 3,
-    overflow: 'hidden',
+    border: '0.5pt solid #dddddd',
+    padding: '5pt 7pt 6pt',
+    flexDirection: 'column',
   },
 
-  // Header
-  header: {
+  // Header carte
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: '4pt 5pt 3pt',
+    justifyContent: 'space-between',
     gap: 4,
-    backgroundColor: '#fff',
-    borderBottom: '0.5pt solid #e5e7eb',
-    minHeight: 28,
+    marginBottom: 3,
   },
-  logoCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    border: '1.5pt solid #1a1a2e',
-    backgroundColor: '#f8f9fa',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  logoBox: {
+    width: 32, height: 32, flexShrink: 0,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    backgroundColor: '#e5e7eb',
   },
-  logoText: { fontSize: 4, fontWeight: 'bold', color: '#1a1a2e' },
   schoolCenter: { flex: 1, alignItems: 'center' },
-  schoolName: { fontSize: 5.5, fontWeight: 'bold', color: '#1a1a2e', textTransform: 'uppercase', letterSpacing: 0.3 },
-  schoolSub: { fontSize: 4, color: '#4b5563', marginTop: 0.5 },
-  flag: { width: 18, height: 12, border: '0.5pt solid #d1d5db', borderRadius: 1 },
-  flagBenin: { width: 18, height: 12, flexDirection: 'row', border: '0.5pt solid #d1d5db', borderRadius: 1, overflow: 'hidden' },
+  schoolName:   { fontSize: 6.5, fontWeight: 'bold', color: '#111', textAlign: 'center' },
+  schoolSub:    { fontSize: 5.5, color: '#444', textAlign: 'center', marginTop: 1 },
+  flagBox:      { width: 32, height: 32, flexShrink: 0, overflow: 'hidden' },
+  flagRow:      { width: 32, height: 32, flexDirection: 'row', border: '0.5pt solid #d1d5db', overflow: 'hidden' },
 
-  // Title band
+  // Titre
   titleBand: {
-    backgroundColor: BLUE,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '3.5pt 5pt',
+    padding: '3pt 6pt',
+    marginBottom: 4,
   },
-  titleText: {
-    color: '#ffffff',
-    fontSize: 8,
-    fontWeight: 'bold',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
+  titleText: { color: '#ffffff', fontSize: 8.5, fontWeight: 'bold', letterSpacing: 0.3 },
 
-  // Body
+  // Corps
   body: {
     flexDirection: 'row',
-    flex: 1,
-    padding: '4pt 5pt 3pt',
     gap: 5,
+    flex: 1,
   },
+  leftCol: { flex: 1 },
+  fieldRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 3, marginBottom: 3.5 },
+  fieldLabel: { fontSize: 5.5, color: '#333', textDecoration: 'underline', width: 42, flexShrink: 0 },
+  fieldValue: { fontSize: 6.5, color: '#111', fontWeight: 'bold', flex: 1 },
 
-  // Left col — fields
-  leftCol: { flex: 1, flexDirection: 'column', gap: 2.2, justifyContent: 'center' },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  fieldLabel: { fontSize: 3.8, color: '#374151', width: 34, textDecoration: 'underline' },
-  fieldValue: { fontSize: 4.2, color: '#111827', fontWeight: 'bold', flex: 1 },
-  fieldValueBlue: { fontSize: 4.2, color: BLUE, fontWeight: 'bold', flex: 1 },
-
-  // Center col — signature
-  centerCol: { width: 40, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  centerCol: { width: 46, alignItems: 'center', justifyContent: 'center' },
   signatureBox: {
-    width: 38,
-    height: 30,
-    backgroundColor: '#f3f4f6',
-    border: '0.8pt solid #d1d5db',
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 2,
-    overflow: 'hidden',
+    width: 46, height: 34,
+    border: '0.5pt dashed #bbb',
+    alignItems: 'center', justifyContent: 'flex-end',
+    padding: '2pt', overflow: 'hidden',
   },
-  signatureText: { fontSize: 2.8, color: '#9ca3af', fontStyle: 'italic', textAlign: 'center' },
+  signatureText: { fontSize: 4.5, color: '#444', fontStyle: 'italic', textDecoration: 'underline', textAlign: 'center' },
 
-  // Right col — photo + year
-  rightCol: { width: 32, alignItems: 'center', gap: 3, flexShrink: 0 },
+  rightCol: { width: 46, alignItems: 'center', justifyContent: 'flex-start', gap: 3 },
+  dateLabel: { fontSize: 5, color: '#111', textAlign: 'center' },
   photo: {
-    width: 28,
-    height: 36,
-    border: `1pt solid ${BLUE}`,
-    borderRadius: 1.5,
-    backgroundColor: '#e8edf2',
+    width: 46, height: 56,
+    backgroundColor: '#dddddd',
     overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center',
   },
-  yearLabel: { fontSize: 3, color: '#6b7280', textAlign: 'center' },
-  yearValue: { fontSize: 4, fontWeight: 'bold', color: BLUE, textAlign: 'center' },
+  yearLabel: { fontSize: 4.5, color: '#111', textAlign: 'center' },
+  yearValue: { fontSize: 6.5, fontWeight: 'bold', color: '#111', textAlign: 'center' },
 
-  // Footer
-  footer: {
-    backgroundColor: '#f8fafc',
-    borderTop: '0.5pt solid #e2e8f0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '2pt 5pt',
-  },
-  footerText: { fontSize: 3, color: '#64748b' },
-  footerBold: { fontSize: 3, fontWeight: 'bold', color: '#374151' },
-  footerBlue: { fontSize: 3, fontWeight: 'bold', color: BLUE },
-  divider: { width: 0.5, height: 6, backgroundColor: '#d1d5db' },
+  // Cellule vide (placeholder pour compléter la dernière ligne)
+  emptyCard: { width: CARD_W, height: CARD_H },
 })
 
-function InfoRow({ label, value, blue }: { label: string; value: string; blue?: boolean }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <PdfView style={S.fieldRow}>
-      <PdfText style={S.fieldLabel}>{label}</PdfText>
-      <PdfText style={blue ? S.fieldValueBlue : S.fieldValue}>{value || '-'}</PdfText>
-    </PdfView>
+    <View style={S.fieldRow}>
+      <Text style={S.fieldLabel}>{label} :</Text>
+      <Text style={S.fieldValue}>{value || '-'}</Text>
+    </View>
   )
 }
 
-function PdfCard({ student, school }: { student: Student; school: School }) {
+function Card({ student, school }: { student: Student; school: School }) {
+  const color = school.themeColor || '#1e3a5f'
   return (
-    <PdfView style={S.card}>
-
-      {/* HEADER */}
-      <PdfView style={S.header}>
-        <PdfView style={S.logoCircle}>
+    <View style={S.card}>
+      {/* Header */}
+      <View style={S.cardHeader}>
+        <View style={S.logoBox}>
           {school.logoUrl
-            ? <PdfImage src={school.logoUrl} style={{ width: 20, height: 20 }} />
-            : <PdfText style={S.logoText}>CS</PdfText>
+            ? <Image src={school.logoUrl} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            : <Text style={{ fontSize: 5, color: '#9ca3af', fontWeight: 'bold' }}>LOGO</Text>
           }
-        </PdfView>
+        </View>
+        <View style={S.schoolCenter}>
+          <Text style={S.schoolName}>{school.name}</Text>
+          {school.adresse
+            ? <Text style={S.schoolSub}>{school.adresse}{school.telephone ? ` — Tél : ${school.telephone}` : ''}</Text>
+            : null
+          }
+          {school.lieu ? <Text style={S.schoolSub}>{school.lieu}</Text> : null}
+        </View>
+        <View style={S.flagBox}>
+          {school.flagUrl
+            ? <Image src={school.flagUrl} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            : (
+              <View style={S.flagRow}>
+                <View style={{ flex: 1, backgroundColor: '#008751' }} />
+                <View style={{ flex: 1, backgroundColor: '#FCD116' }} />
+                <View style={{ flex: 1, backgroundColor: '#E8112D' }} />
+              </View>
+            )
+          }
+        </View>
+      </View>
 
-        <PdfView style={S.schoolCenter}>
-          <PdfText style={S.schoolName}>{school.name}</PdfText>
-          {school.adresse ? <PdfText style={S.schoolSub}>{school.adresse}</PdfText> : null}
-          {school.telephone ? <PdfText style={S.schoolSub}>Tel : {school.telephone}</PdfText> : null}
-          {school.lieu ? <PdfText style={S.schoolSub}>{school.lieu}</PdfText> : null}
-        </PdfView>
+      {/* Titre */}
+      <View style={[S.titleBand, { backgroundColor: color }]}>
+        <Text style={S.titleText}>CARTE D'IDENTITE SCOLAIRE</Text>
+      </View>
 
-        {school.flagUrl ? (
-          <PdfImage src={school.flagUrl} style={S.flag} />
-        ) : (
-          <PdfView style={S.flagBenin}>
-            <PdfView style={{ flex: 1, backgroundColor: '#008751' }} />
-            <PdfView style={{ flex: 1, backgroundColor: '#FCD116' }} />
-            <PdfView style={{ flex: 1, backgroundColor: '#E8112D' }} />
-          </PdfView>
-        )}
-      </PdfView>
+      {/* Corps */}
+      <View style={S.body}>
+        <View style={S.leftCol}>
+          <InfoRow label="Nom et prénoms" value={`${student.nom} ${student.prenoms}`} />
+          <InfoRow label="Né(e) le"       value={student.neLe + (student.lieuNaissance ? ` à ${student.lieuNaissance}` : '')} />
+          <InfoRow label="Nationalité"    value={student.nationalite || '-'} />
+          <InfoRow label="Sexe"           value={student.sexe === 'M' ? 'Masculin' : student.sexe === 'F' ? 'Féminin' : '-'} />
+          <InfoRow label="Classe"         value={student.classe || '-'} />
+          {student.tel ? <InfoRow label="N° Tél" value={student.tel} /> : null}
+          <InfoRow label="N° Matricule"   value={student.matricule} />
+        </View>
 
-      {/* TITLE BAND */}
-      <PdfView style={S.titleBand}>
-        <PdfText style={S.titleText}>CARTE D&apos;IDENTITE SCOLAIRE</PdfText>
-      </PdfView>
-
-      {/* BODY */}
-      <PdfView style={S.body}>
-
-        {/* Left — fields */}
-        <PdfView style={S.leftCol}>
-          <InfoRow label="Nom et prenoms" value={`${student.nom} ${student.prenoms}`} />
-          <InfoRow label="Ne(e) le" value={student.neLe} />
-          <InfoRow label="Nationalite" value={student.nationalite} />
-          <InfoRow label="Sexe" value={student.sexe === 'M' ? 'Masculin' : 'Feminin'} />
-          <InfoRow label="Classe" value={student.classe} />
-          {student.tel ? <InfoRow label="N Tel" value={student.tel} /> : null}
-          <InfoRow label="N Matricule" value={student.matricule} blue />
-        </PdfView>
-
-        {/* Center — signature */}
-        <PdfView style={S.centerCol}>
-          <PdfView style={S.signatureBox}>
+        <View style={S.centerCol}>
+          <View style={school.signatureUrl ? { ...S.signatureBox, border: 'none' } : S.signatureBox}>
             {school.signatureUrl
-              ? <PdfImage src={school.signatureUrl} style={{ maxWidth: 36, maxHeight: 26 }} />
-              : <PdfText style={S.signatureText}>{'Signature\ndu titulaire'}</PdfText>
+              ? <Image src={school.signatureUrl} style={{ maxWidth: 42, maxHeight: 30, objectFit: 'cover' }} />
+              : <Text style={S.signatureText}>Signature du titulaire</Text>
             }
-          </PdfView>
-        </PdfView>
+          </View>
+        </View>
 
-        {/* Right — photo + year */}
-        <PdfView style={S.rightCol}>
-          <PdfView style={S.photo}>
+        <View style={S.rightCol}>
+          <Text style={S.dateLabel}>{school.dateCarteLabel}</Text>
+          <View style={S.photo}>
             {student.photoUrl
-              ? <PdfImage src={student.photoUrl} style={{ width: 28, height: 36, objectFit: 'cover' }} />
+              ? <Image src={student.photoUrl} style={{ width: 46, height: 56, objectFit: 'cover' }} />
               : null
             }
-          </PdfView>
-          <PdfView style={{ alignItems: 'center' }}>
-            <PdfText style={S.yearLabel}>ANNEE SCOLAIRE</PdfText>
-            <PdfText style={S.yearValue}>{school.anneeScolaire}</PdfText>
-          </PdfView>
-        </PdfView>
-      </PdfView>
-
-      {/* FOOTER */}
-      <PdfView style={S.footer}>
-        <PdfText style={S.footerText}>
-          Delivre le : <PdfText style={S.footerBold}>{school.dateCarteLabel}</PdfText>
-        </PdfText>
-        <PdfView style={S.divider} />
-        <PdfText style={S.footerText}>
-          Annee scolaire : <PdfText style={S.footerBlue}>{school.anneeScolaire}</PdfText>
-        </PdfText>
-      </PdfView>
-    </PdfView>
+          </View>
+          <Text style={S.yearLabel}>ANNÉE SCOLAIRE</Text>
+          <Text style={S.yearValue}>{school.anneeScolaire}</Text>
+        </View>
+      </View>
+    </View>
   )
 }
 
-interface CardifyDocumentProps {
-  students: Student[]
-  school: School
-  qrCodes: Record<string, string>
-}
+export default function CardifyDocument({ students, school }: { students: Student[]; school: School }) {
+  const pages = chunkArray(students, 8)
 
-export default function CardifyDocument({ students, school }: CardifyDocumentProps) {
-  const pages = chunkArray(students, 3)
   return (
-    <PdfDoc title={`Cartes scolaires - ${school.name}`} author="Cardify">
-      {pages.map((group, pageIdx) => (
-        <PdfPage key={pageIdx} size="A4" orientation="portrait" style={S.page}>
-          {group.map((student) => (
-            <PdfView key={student.id} style={S.pageRow}>
-              <PdfCard student={student} school={school} />
-            </PdfView>
-          ))}
-        </PdfPage>
-      ))}
-    </PdfDoc>
+    <Document title={`Cartes scolaires — ${school.name}`} author="Cardify">
+      {pages.map((group, pageIdx) => {
+        const rows = chunkArray(group, 2)
+        // Compléter la dernière ligne si impaire
+        if (rows[rows.length - 1].length === 1) rows[rows.length - 1].push(null as unknown as Student)
+
+        return (
+          <Page key={pageIdx} size="A4" style={S.page}>
+            {/* En-tête de page */}
+            <View style={S.pageHeader}>
+              <Text style={S.pageLabel}>Page {pageIdx + 1}</Text>
+              <View style={S.separator} />
+              <Text style={S.pageCount}>{group.length} carte(s)</Text>
+            </View>
+
+            {/* Grille 2×4 */}
+            {rows.map((row, rowIdx) => (
+              <View key={rowIdx} style={S.row}>
+                {row.map((student, colIdx) =>
+                  student
+                    ? <Card key={student.id || colIdx} student={student} school={school} />
+                    : <View key={`empty-${colIdx}`} style={S.emptyCard} />
+                )}
+              </View>
+            ))}
+          </Page>
+        )
+      })}
+    </Document>
   )
 }
