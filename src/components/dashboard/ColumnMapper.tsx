@@ -99,7 +99,7 @@ export default function ColumnMapper() {
 
     // Pour chaque champ, trouver la meilleure colonne
     Object.entries(patterns).forEach(([field, patternList]) => {
-      let bestMatch: { header: string; score: number } | null = null
+    let bestMatch: { header: string; score: number } | null = null
 
       rawHeaders.forEach((header) => {
         // Tester tous les patterns pour ce header
