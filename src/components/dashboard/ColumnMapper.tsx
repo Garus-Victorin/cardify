@@ -99,23 +99,20 @@ export default function ColumnMapper() {
 
     // Pour chaque champ, trouver la meilleure colonne
     Object.entries(patterns).forEach(([field, patternList]) => {
-    let bestMatch: { header: string; score: number } | null = null
+      let bestHeader = ''
+      let bestScore = -1
 
       rawHeaders.forEach((header) => {
-        // Tester tous les patterns pour ce header
         patternList.forEach(({ regex, score }) => {
-          if (regex.test(header)) {
-            // Si ce match est meilleur que le précédent, on le garde
-            if (!bestMatch || score > bestMatch.score) {
-              bestMatch = { header, score }
-            }
+          if (regex.test(header) && score > bestScore) {
+            bestHeader = header
+            bestScore = score
           }
         })
       })
 
-      // Assigner le meilleur match trouvé
-      if (bestMatch) {
-        auto[field] = bestMatch.header
+      if (bestHeader) {
+        auto[field] = bestHeader
       }
     })
 
