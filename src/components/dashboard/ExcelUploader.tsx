@@ -47,9 +47,8 @@ export default function ExcelUploader() {
     <div className="space-y-5">
 
       {/* ── Drop zone ── */}
-      <motion.div
+      <div
         {...getRootProps()}
-        whileTap={{ scale: 0.995 }}
         className={cn(
           'relative group rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 overflow-hidden select-none',
           isDragActive
@@ -59,6 +58,7 @@ export default function ExcelUploader() {
             : 'border-slate-200 bg-slate-50/60 hover:border-emerald-300 hover:bg-emerald-50/30 hover:shadow-md'
         )}
       >
+        <motion.div whileTap={{ scale: 0.995 }}>
         <input {...getInputProps()} />
 
         {/* Animated background dots */}
@@ -98,7 +98,8 @@ export default function ExcelUploader() {
             ))}
           </div>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* ── Error ── */}
       <AnimatePresence>
